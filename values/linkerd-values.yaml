@@ -1,0 +1,29 @@
+# linkerd control-plane values — dev profile (single replica per component).
+# This file is the single source of truth for the local/dev install.
+# Production overrides (HA, resources) live in infra-kubernetes envs/<env>
+# and are applied by ArgoCD — keep flags in sync when changing them here.
+
+# Dev profile: one controller replica, no HA pod anti-affinity.
+highAvailability: false
+
+controllerReplicas: 1
+
+# Heartbeat cronjob adds noise to a single-node dev cluster.
+disableHeartBeat: true
+
+proxy:
+  # Sidecar defaults; per-workload overrides belong to each service chart.
+  resources:
+    cpu:
+      request: 100m
+    memory:
+      request: 20Mi
+      limit: 250Mi
+
+identity:
+  issuer:
+    # Self-signed issuer rotated every 24h by Linkerd identity (dev default).
+    # In production the issuer is supplied from Vault/cert-manager via
+    # infra-kubernetes — see docs/architecture.md.
+    scheme: kubernetes.io/tls
+    rotationGracePeriod: 24h

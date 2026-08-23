@@ -21,7 +21,7 @@ section "Static checks"
 command -v kubectl >/dev/null && ok "kubectl found" || fail "kubectl not found"
 command -v linkerd >/dev/null && ok "linkerd CLI found ($(linkerd version --client --short 2>/dev/null))" || fail "linkerd CLI not found"
 [ -f "${PROJECT_DIR}/values/linkerd-values.yaml" ] && ok "values/linkerd-values.yaml present" || fail "values/linkerd-values.yaml missing"
-python3 -c "import yaml,sys; yaml.safe_load(open('${PROJECT_DIR}/values/linkerd-values.yaml'))" 2>/dev/null \
+npx --yes js-yaml "${PROJECT_DIR}/values/linkerd-values.yaml" > /dev/null 2>&1 \
   && ok "values/linkerd-values.yaml parses as YAML" || fail "values/linkerd-values.yaml invalid YAML"
 
 for key in ENVIRONMENT LINKERD_VERSION LINKERD_NAMESPACE; do

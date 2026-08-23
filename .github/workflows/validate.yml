@@ -32,13 +32,10 @@ jobs:
 
       - name: Validate YAML files
         run: |
-          python3 - <<'PY'
-          import glob, sys, yaml
-          files = glob.glob("values/*.yaml") + glob.glob(".github/**/*.yml", recursive=True)
-          for f in files:
-              yaml.safe_load(open(f))
-              print(f"[OK] {f}")
-          PY
+          for f in values/*.yaml .github/**/*.yml; do
+            npx --yes js-yaml "$f" > /dev/null
+            echo "[OK] $f"
+          done
 
       - name: Check .env.example has all required keys
         run: |

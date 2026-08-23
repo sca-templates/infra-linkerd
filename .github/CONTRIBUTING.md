@@ -57,4 +57,4 @@ npx --yes markdown-link-check -c .github/markdown-link-check.json <file>
 
 ## License
 
-This repository is licensed under the MIT License (see [LICENSE](LICENSE)).
+This repository is licensed under the MIT License (see [LICENSE](../LICENSE)).

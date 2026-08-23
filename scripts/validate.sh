@@ -18,14 +18,33 @@ fail() { (( FAIL++ )) || true; echo "  FAIL $1"; }
 section() { echo ""; echo "── $1 ──────────────────────────────────────"; }
 
 section "Static checks"
-command -v kubectl >/dev/null && ok "kubectl found" || fail "kubectl not found"
-command -v linkerd >/dev/null && ok "linkerd CLI found ($(linkerd version --client --short 2>/dev/null))" || fail "linkerd CLI not found"
-[ -f "${PROJECT_DIR}/values/linkerd-values.yaml" ] && ok "values/linkerd-values.yaml present" || fail "values/linkerd-values.yaml missing"
-npx --yes js-yaml "${PROJECT_DIR}/values/linkerd-values.yaml" > /dev/null 2>&1 \
-  && ok "values/linkerd-values.yaml parses as YAML" || fail "values/linkerd-values.yaml invalid YAML"
+if command -v kubectl >/dev/null; then
+  ok "kubectl found"
+else
+  fail "kubectl not found"
+fi
+if command -v linkerd >/dev/null; then
+  ok "linkerd CLI found ($(linkerd version --client --short 2>/dev/null))"
+else
+  fail "linkerd CLI not found"
+fi
+if [ -f "${PROJECT_DIR}/values/linkerd-values.yaml" ]; then
+  ok "values/linkerd-values.yaml present"
+else
+  fail "values/linkerd-values.yaml missing"
+fi
+if npx --yes js-yaml "${PROJECT_DIR}/values/linkerd-values.yaml" > /dev/null 2>&1; then
+  ok "values/linkerd-values.yaml parses as YAML"
+else
+  fail "values/linkerd-values.yaml invalid YAML"
+fi
 
 for key in ENVIRONMENT LINKERD_VERSION LINKERD_NAMESPACE; do
-  grep -q "^${key}=" "${PROJECT_DIR}/.env.example" && ok ".env.example has ${key}" || fail ".env.example missing ${key}"
+  if grep -q "^${key}=" "${PROJECT_DIR}/.env.example"; then
+    ok ".env.example has ${key}"
+  else
+    fail ".env.example missing ${key}"
+  fi
 done
 
 if [ "$STATIC_ONLY" = "--static-only" ]; then
@@ -45,13 +64,21 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
 else
   ok "cluster reachable"
   NS_CODE="$(kubectl get namespace "$LINKERD_NAMESPACE" -o name 2>/dev/null || true)"
-  [ -n "$NS_CODE" ] && ok "namespace ${LINKERD_NAMESPACE} exists" || fail "namespace ${LINKERD_NAMESPACE} missing (run: make install)"
+  if [ -n "$NS_CODE" ]; then
+    ok "namespace ${LINKERD_NAMESPACE} exists"
+  else
+    fail "namespace ${LINKERD_NAMESPACE} missing (run: make install)"
+  fi
 
   READY="$(kubectl -n "$LINKERD_NAMESPACE" get pods -o json 2>/dev/null \
     | python3 -c 'import sys,json; pods=json.load(sys.stdin)["items"]; print(sum(1 for p in pods if all(c["status"] == "True" and c.get("reason", "") != "PodInitializing" for c in p["status"].get("containerStatuses", []) if c["name"] != "linkerd-proxy")))') || echo 0)"
   TOTAL="$(kubectl -n "$LINKERD_NAMESPACE" get pods -o json 2>/dev/null \
     | python3 -c 'import sys,json; print(len(json.load(sys.stdin)["items"]))' 2>/dev/null || echo 0)"
-  [ "$TOTAL" -gt 0 ] && [ "$READY" -eq "$TOTAL" ] && ok "control-plane pods ready (${READY}/${TOTAL})" || fail "control-plane pods ready (${READY}/${TOTAL})"
+  if [ "$TOTAL" -gt 0 ] && [ "$READY" -eq "$TOTAL" ]; then
+    ok "control-plane pods ready (${READY}/${TOTAL})"
+  else
+    fail "control-plane pods ready (${READY}/${TOTAL})"
+  fi
 
   section "linkerd check (summary)"
   if command -v linkerd >/dev/null && linkerd check --timeout 60s >/tmp/linkerd-check.$$ 2>&1; then
